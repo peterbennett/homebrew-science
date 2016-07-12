@@ -1,8 +1,8 @@
 class Pulseview < Formula
+  desc "Qt-based GUI for the sigrok software suite for DSOs, LSAs, and more."
   homepage "http://sigrok.org/"
-  url "http://sigrok.org/download/source/pulseview/pulseview-0.2.0.tar.gz"
-  sha256 "feb5d33a0a91c989bfc39fa758195755e78e87c3cf445bb135a8c8d4f86bc1dd"
-  revision 1
+  url "http://sigrok.org/download/source/pulseview/pulseview-0.3.0.tar.gz"
+  sha256 "5ffe2cb7a602fcdc60933d400c77bcd66e6ce529bc4f6e97d6a5e5a86f2f530e"
 
   bottle do
     cellar :any
@@ -27,9 +27,11 @@ class Pulseview < Formula
   depends_on :python3
 
   def install
+    # Let's make sure we use the correct version of python not just 3.4
+    version = Language::Python.major_minor_version "python3"
     ENV.delete "PYTHONPATH"
-    ENV.append_path("PKG_CONFIG_PATH", lib / "pkgconfig")
-    ENV.append_path "PKG_CONFIG_PATH", HOMEBREW_PREFIX / "Frameworks/Python.framework/Versions/3.4/lib/pkgconfig"
+    ENV.append_path "PKG_CONFIG_PATH", lib / "pkgconfig"
+    ENV.append_path "PKG_CONFIG_PATH", HOMEBREW_PREFIX / "Frameworks/Python.framework/Versions/#{version}/lib/pkgconfig"
 
     qt = Formula["qt"].opt_prefix
     args = std_cmake_args + %W[
