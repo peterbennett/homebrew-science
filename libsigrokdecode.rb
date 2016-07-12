@@ -3,8 +3,8 @@ class Libsigrokdecode < Formula
   homepage "http://sigrok.org/"
 
   stable do
-    url "http://sigrok.org/download/source/libsigrokdecode/libsigrokdecode-0.3.1.tar.gz"
-    sha256 "2c50efe16c2424b77ab0d9ae6b5d98d7c9894407ddb43dfb43846b3bdef5b5d1"
+    url "http://sigrok.org/download/source/libsigrokdecode/libsigrokdecode-0.4.0.tar.gz"
+    sha256 "fd7e9d1b73245e844ead97a16d5321c766196f946c9b28a8646cab2e98ec3537"
 
     resource "librevisa" do
       url "http://www.librevisa.org/git/librevisa.git", :tag => "alpha-2013-08-12",
@@ -12,13 +12,13 @@ class Libsigrokdecode < Formula
     end
 
     resource "libserialport" do
-      url "http://sigrok.org/download/source/libserialport/libserialport-0.1.0.tar.gz"
-      sha256 "ec905bd64bd8b82234b68a5eded5fd79b67704fe0cd73bf092666b9679a319af"
+      url "http://sigrok.org/download/source/libserialport/libserialport-0.1.1.tar.gz"
+      sha256 "4a2af9d9c3ff488e92fb75b4ba38b35bcf9b8a66df04773eba2a7bbf1fa7529d"
     end
 
     resource "libsigrok" do
-      url "http://sigrok.org/download/source/libsigrok/libsigrok-0.3.0.tar.gz"
-      sha256 "43926907a06f1d7aa73c68ae379d66412ac2728483eed7d20a8cf061f73f7050"
+      url "http://sigrok.org/download/source/libsigrok/libsigrok-0.4.0.tar.gz"
+      sha256 "5f291f3fee36e6dab1336f1c78596e50588831bc5ebd7cddc2a95fe8c71d669e"
     end
   end
 
@@ -57,6 +57,14 @@ class Libsigrokdecode < Formula
   depends_on "libzip"
   depends_on :python3
 
+  # This is required to build libsigrokcxx which is needed for pulseview
+  depends_on "glibmm" =>   :recommended
+  depends_on "doxygen" =>  :recommended
+
+  # This is required to build python bindings
+  depends_on "homebrew/python/numpy" => :optional
+  depends_on "pygobject" =>:optional
+
   depends_on "check"    => :optional
   depends_on "libftdi0" => :optional
   depends_on "libusb"   => :recommended
@@ -74,9 +82,11 @@ class Libsigrokdecode < Formula
       --prefix=#{prefix}
     ]
 
+    # Let's make sure we use the correct version of python not just 3.4
+    version = Language::Python.major_minor_version "python3"
     ENV.delete "PYTHONPATH"
     ENV.append_path "PKG_CONFIG_PATH", lib / "pkgconfig"
-    ENV.append_path "PKG_CONFIG_PATH", HOMEBREW_PREFIX / "Frameworks/Python.framework/Versions/3.4/lib/pkgconfig"
+    ENV.append_path "PKG_CONFIG_PATH", HOMEBREW_PREFIX / "Frameworks/Python.framework/Versions/#{version}/lib/pkgconfig"
 
     resource("libserialport").stage do
       system "./autogen.sh" if build.head?
@@ -107,5 +117,22 @@ class Libsigrokdecode < Formula
     system "./configure", *common_args
     system "make", "check" if build.with? "check"
     system "make", "install"
+  end
+
+  test do
+    (testpath/"test.c").write <<-EOS.undent
+      #include <libsigrokdecode/libsigrokdecode.h>
+
+      int main(int argc, char *argv[])
+      {
+         int version;
+         version = srd_package_version_major_get();
+
+         return 0;
+      }
+    EOS
+    glib = Formula["glib"]
+    system ENV.cc, "test.c", "-I#{include}", "-I#{glib.opt_include}/glib-2.0", "-I#{glib.opt_lib}/glib-2.0/include", "-L#{lib}", "-L#{glib.opt_lib}", "-lsigrokdecode", "-lglib-2.0", "-o", "test"
+    system "./test"
   end
 end
